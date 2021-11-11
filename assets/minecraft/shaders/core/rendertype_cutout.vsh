@@ -3,7 +3,7 @@
 #moj_import <light.glsl>
 
 const float PHI = 1.61803398875;
-const float SWAYING_AMOUNT = 0.1;
+const float SWAYING_AMOUNT = 0.015;
 const float SWAYING_SPEED = 1000.0;
 const float EPSILON = 0.001;
 
@@ -26,11 +26,18 @@ out vec4 vertexColor;
 out vec2 texCoord0;
 out vec4 normal;
 
-mat3 tbn(vec3 normal, vec3 up) {
-	vec3 tangent = normalize(cross(up, normal));
-	vec3 bitangent = cross(normal, tangent);
-	
-	return mat3(tangent, bitangent, normal);
+vec4 quaternionMultiply(vec4 a, vec4 b) {
+    return vec4(
+        a.x * b.w + a.y * b.z - a.z * b.y + a.w * b.x,
+        -a.x * b.z + a.y * b.w + a.z * b.x + a.w * b.y,
+        a.x * b.y - a.y * b.x + a.z * b.w + a.w * b.z,
+        -a.x * b.x - a.y * b.y - a.z * b.z + a.w * b.w
+    );
+}
+
+vec3 quaternionRotate(vec3 pos, vec4 q) {
+    vec4 qInv = vec4(-q.xyz, q.w);
+    return quaternionMultiply(quaternionMultiply(q, vec4(pos, 0)), qInv).xyz;
 }
 
 void main() {
@@ -39,17 +46,21 @@ void main() {
 	float alpha = texture(Sampler0, UV0).a;
 	if (abs(alpha - 141.0 / 255.0) < 0.001) {
 		
-		float time = GameTime * SWAYING_SPEED + dot(floor(Position), vec3(1)) * 1234.0;
-		vec3 newForward = normalize(vec3(
-			sin(time) * SWAYING_AMOUNT,
-			sin(time * PHI) * SWAYING_AMOUNT,
-			-1 + sin(time * 3.14) * SWAYING_AMOUNT
-		));
-		
 		vec3 relativePos = fract(Position);
+		
 		if (relativePos.y > EPSILON) {
-			relativePos -= vec3(0.5, 1, 0.5);
-			relativePos = tbn(newForward, vec3(0, 1, 0)) * relativePos;
+			float time = GameTime * SWAYING_SPEED + dot(floor(Position), vec3(1)) * 1234.0;
+			vec3 newDown = normalize(vec3(
+				sin(time * PHI) * SWAYING_AMOUNT,
+				-1,
+				sin(time) * SWAYING_AMOUNT
+			));
+		
+			relativePos -= vec3(0.5, 1.0, 0.5);
+			vec3 axis = normalize(cross(vec3(0, 1, 0), newDown));
+			float cosAngle = newDown.y;
+			vec4 quat = vec4(sqrt(1 - cosAngle * cosAngle) * axis, cosAngle);
+			relativePos = quaternionRotate(relativePos, quat);
 			vec3 newPos = relativePos + vec3(0.5, 1, 0.5);
 			gl_Position = ProjMat * ModelViewMat * vec4(floor(Position) + newPos + ChunkOffset, 1.0);
 		}
