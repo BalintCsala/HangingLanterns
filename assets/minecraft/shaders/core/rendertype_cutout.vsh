@@ -5,6 +5,8 @@
 const float PHI = 1.61803398875;
 const float SWAYING_AMOUNT = 0.015;
 const float SWAYING_SPEED = 1000.0;
+const float SWAYING_MULTIPLIER = 1.0;
+const float SWAYING_AMOUNT_MULTIPLIER = 1.0;
 const float EPSILON = 0.001;
 
 in vec3 Position;
@@ -49,11 +51,11 @@ void main() {
 		vec3 relativePos = fract(Position);
 		
 		if (relativePos.y > EPSILON) {
-			float time = GameTime * SWAYING_SPEED + dot(floor(Position), vec3(1)) * 1234.0;
+			float time = GameTime * SWAYING_SPEED * SWAYING_MULTIPLIER + dot(floor(Position), vec3(1)) * 1234.0;
 			vec3 newDown = normalize(vec3(
-				sin(time * PHI) * SWAYING_AMOUNT,
+				sin(time * PHI) * SWAYING_AMOUNT * SWAYING_AMOUNT_MULTIPLIER,
 				-1,
-				sin(time) * SWAYING_AMOUNT
+				sin(time) * SWAYING_AMOUNT * SWAYING_AMOUNT_MULTIPLIER
 			));
 		
 			relativePos -= vec3(0.5, 1.0, 0.5);
